@@ -1,5 +1,8 @@
 #include <ESP32-HUB75-MatrixPanel-I2S-DMA.h>
 #include <FastLED.h>
+#include <WiFi.h>
+#include <HTTPClient.h>
+#include <Arduino_JSON.h>
 
 // DO NOT CHANGE
 #define R1_PIN 25
@@ -16,6 +19,9 @@
 #define LAT_PIN 4
 #define OE_PIN 15
 #define CLK_PIN 19
+
+const char* ssid = "iOT-LAB";
+const char* password = "photon999";
 
 // Initialize matrix
 MatrixPanel_I2S_DMA *dma_display = nullptr;
@@ -63,8 +69,47 @@ void setup() {
   }
   
   drawMap(array);
+
+  Serial.begin(115200);
+
+  WiFi.begin(ssid, password);
+  while(WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.print("ESP32 IP Address: ");
+  Serial.println(WiFi.localIP());
 }
 
 void loop() {
   drawMap(array);
+
+  HTTPClient http;
+
+  http.begin("https://api.particle.io/v1/devices/thinky/speed?access_token=78a99eb4943d042f674bedd4ab8095af43702e39");
+
+  int httpResponseCode = http.GET();
+  
+  String result = "{}"; 
+  
+  if (httpResponseCode>0) {
+    Serial.print("HTTP Response code: ");
+    Serial.println(httpResponseCode);
+    result = http.getString();
+  }
+
+  http.end();
+
+  JSONVar json = JSON.parse(result);
+    
+  Serial.print("1 = ");
+  Serial.println(json["result"]);
+
+  Serial.println(http.GET());
+  Serial.println(json);
+  http.end();
+  delay(500);
+  
 }
+
+
