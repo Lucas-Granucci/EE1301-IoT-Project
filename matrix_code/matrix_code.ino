@@ -3,6 +3,7 @@
 #include <WiFi.h>
 #include <HTTPClient.h>
 #include <Arduino_JSON.h>
+#include <cmath>
 
 // DO NOT CHANGE
 #define R1_PIN 25
@@ -25,11 +26,37 @@ const char* password = "photon999";
 
 // Initialize matrix
 MatrixPanel_I2S_DMA *dma_display = nullptr;
-const size_t SIZE = 64;
+const size_t SIZE = 42;
 
 uint16_t myWHITE;
 
-int array[SIZE][SIZE] = {0};
+bool array[SIZE][SIZE][SIZE] = {0}; // x, y, z
+
+void drawMap(bool array[SIZE][SIZE][SIZE], int angRad) {
+  
+  for (int i = 0; i < SIZE; i++) {
+    for (int z = 0; z < SIZE; z++) {
+
+      int x = round(i * cos(angRad));
+      int y = round(i * sin(angRad));
+
+      bool val = array[x][y][z];
+
+      // switch (val) {
+      //   case 0:
+      //     break;
+      //   case 1:
+      //     dma_display->drawPixel(i, z, myWHITE);
+      //     break;
+      //   default:
+      //     break;
+      // }
+      if (val) {
+        dma_display->drawPixel(i, z, myWHITE);
+      }
+    }
+  }
+}
 
 void drawMap(int array[SIZE][SIZE]) {
   for (int i = 0; i < SIZE; i++) {
@@ -50,7 +77,24 @@ void drawMap(int array[SIZE][SIZE]) {
   }
 }
 
+String getHTTP(String url) {
+  HTTPClient http;
+
+  http.begin(url);
+  int httpResponseCode = http.GET();
+  String result = "{}"; 
+  if (httpResponseCode>0) {
+    Serial.print("HTTP Response code: ");
+    Serial.println(httpResponseCode);
+    result = http.getString();
+  }
+  http.end();
+  return result;
+
+}
+
 void setup() {
+  Serial.begin(115200);
   HUB75_I2S_CFG::i2s_pins _pins={R1_PIN, G1_PIN, B1_PIN, R2_PIN, G2_PIN, B2_PIN, A_PIN, B_PIN, C_PIN, D_PIN, E_PIN, LAT_PIN, OE_PIN, CLK_PIN};
   HUB75_I2S_CFG mxconfig(64, 64, 1, _pins);
 
@@ -58,19 +102,32 @@ void setup() {
   dma_display->begin();
   dma_display->clearScreen();
 
+  Serial.print(1);
+
   // Declare some basic colors
   myWHITE = dma_display->color565(255, 255, 255);
+  Serial.print(2);
 
   // Make square
-  for (int i = 16; i < 48; i++) {
-    for (int j = 16; j < 48; j++) {
-        array[i][j] = 1;
+  // for (int i = 16; i < 48; i++) {
+  //   for (int j = 16; j < 48; j++) {
+  //       array[i][j] = 1;
+  //   }
+  // }
+
+  // make cube
+  for (int x = 10; x < 32; x++) {
+    for (int y = 10; y < 32; y++) {
+      for (int z = 10; z < 32; z++) {
+        array[x][y][z] = true;
+      }
     }
   }
+  Serial.println(3);
   
-  drawMap(array);
+  // drawMap(array);
 
-  Serial.begin(115200);
+  
 
   WiFi.begin(ssid, password);
   while(WiFi.status() != WL_CONNECTED) {
@@ -81,35 +138,27 @@ void setup() {
   Serial.println(WiFi.localIP());
 }
 
+double lastAngle = 0;
+double lastReadAngle = 0;
+int lastTime = 0;
+
 void loop() {
-  drawMap(array);
-
-  HTTPClient http;
-
-  http.begin("https://api.particle.io/v1/devices/thinky/speed?access_token=78a99eb4943d042f674bedd4ab8095af43702e39");
-
-  int httpResponseCode = http.GET();
   
-  String result = "{}"; 
-  
-  if (httpResponseCode>0) {
-    Serial.print("HTTP Response code: ");
-    Serial.println(httpResponseCode);
-    result = http.getString();
+  JSONVar angleJSON = JSON.parse(getHTTP("https://api.particle.io/v1/devices/thinky/position?access_token=78a99eb4943d042f674bedd4ab8095af43702e39"));
+  double angle = angleJSON["result"];
+  Serial.println(angle);
+
+  if (lastReadAngle != angle) { // like if we are rate limited
+    int time = micros();
+    JSONVar speedJSON = JSON.parse(getHTTP("https://api.particle.io/v1/devices/thinky/speed?access_token=78a99eb4943d042f674bedd4ab8095af43702e39"));
+    double speed = speedJSON["result"];
+    Serial.println(speed);
+
+    angle = lastAngle + speed * (lastTime - time);
+
   }
+  lastAngle = angle;
 
-  http.end();
-
-  JSONVar json = JSON.parse(result);
-    
-  Serial.print("1 = ");
-  Serial.println(json["result"]);
-
-  Serial.println(http.GET());
-  Serial.println(json);
-  http.end();
-  delay(500);
+  drawMap(array, angle);
   
 }
-
-
