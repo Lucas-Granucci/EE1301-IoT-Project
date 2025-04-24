@@ -5,6 +5,8 @@
 #include <HTTPClient.h>
 #include <Arduino_JSON.h>
 #include <cmath>
+#include "soc/soc.h"
+#include "soc/rtc_cntl_reg.h"
 
 const char* ssid = "ESP32_AP";
 const char* password = "esp32password";
@@ -12,7 +14,7 @@ const char* password = "esp32password";
 // UDP settings
 WiFiUDP udp;
 unsigned int localUdpPort = 4210;
-char packetBuffer = [255]; // Buffer for incoming packets
+char packetBuffer[255]; // Buffer for incoming packets
 
 // DO NOT CHANGE
 #define R1_PIN 25
@@ -105,6 +107,9 @@ void drawMap(int array[SIZE][SIZE]) {
 // }
 
 void setup() {
+  // WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0);
+  // WiFi.setTxPower(WIFI_POWER_MINUS_1dBm);
+
   Serial.begin(115200);
   HUB75_I2S_CFG::i2s_pins _pins={R1_PIN, G1_PIN, B1_PIN, R2_PIN, G2_PIN, B2_PIN, A_PIN, B_PIN, C_PIN, D_PIN, E_PIN, LAT_PIN, OE_PIN, CLK_PIN};
   HUB75_I2S_CFG mxconfig(64, 64, 1, _pins);
@@ -115,12 +120,19 @@ void setup() {
 
   Serial.print(1);
 
+
+  // Declare some basic colors
+  myWHITE = dma_display->color565(0, 0, 255);
+  dma_display->setBrightness8(150);
+  Serial.print(2);
+  dma_display->fillScreen(myWHITE);
+
   ///////////////////////////////////////////////////////////////////////////////
 
   // Configure ESP32 as access point
   WiFi.softAP(ssid, password);
 
-  IPAddress myIP = WiFI.softAPIP();
+  IPAddress myIP = WiFi.softAPIP();
   Serial.print("AP IP address: ");
   Serial.println(myIP);
 
@@ -131,11 +143,6 @@ void setup() {
   ///////////////////////////////////////////////////////////////////////////////
   
 
-  // Declare some basic colors
-  myWHITE = dma_display->color565(0, 0, 255);
-  dma_display->setBrightness8(150);
-  Serial.print(2);
-  dma_display->fillScreen(myWHITE);
 
   // Make square
   // for (int i = 16; i < 48; i++) {
@@ -171,18 +178,18 @@ int lastTime = 0;
 void loop() {
 
   // Check for incoming UDP packets
-  int packetSize = udp.parsePacket();
-  if (packetSize) {
-    Serial.print("Recieved %d bytes from %s, port %d\n", packetSize, udp.remoteIP().toString().c_str(), udp.remotedPort());
+  // int packetSize = udp.parsePacket();
+  // if (packetSize) {
+  //   // Serial.print("Recieved %d bytes from %s, port %d\n", packetSize, udp.remoteIP().toString().c_str(), udp.remotePort());
 
-    // Read packet into buffer
-    int len = udp.read(packetBuffer, 255);
-    if (len > 0) {
-      packetBuffer[len] = 0; // null-terminate the string
-    }
-  }
+  //   // Read packet into buffer
+  //   int len = udp.read(packetBuffer, 255);
+  //   if (len > 0) {
+  //     packetBuffer[len] = 0; // null-terminate the string
+  //   }
+  // }
 
-  Serial.printf("UDP packet contents: %s\n", packetBuffer);
+  // Serial.printf("UDP packet contents: %s\n", packetBuffer);
   
   // JSONVar angleJSON = JSON.parse(getHTTP("https://api.particle.io/v1/devices/thinky/position?access_token=78a99eb4943d042f674bedd4ab8095af43702e39"));
   // double angle = angleJSON["result"];

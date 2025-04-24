@@ -24,7 +24,7 @@ const char* ESP_SSID = "ESP32_AP";
 const char* ESP_PASSWORD = "esp32password";
 
 // server details
-IPAdress serverIP(192, 168, 4, 1);  // check serials logs of esp32
+IPAddress serverIP(192, 168, 4, 1);  // check serials logs of esp32
 unsigned int serverPort = 4210;
 unsigned int localPort = 4210;
 
@@ -56,11 +56,11 @@ void setup() {
   // setup particle to connect to esp32's AP and not cloud
   Particle.disconnect();
   WiFi.disconnect();
-  Particle.connect = MANUAL;
 
   // connect to esp32 AP
   Serial.printlnf("Connecting to %s...", ESP_SSID);
-  WiFi.connect(ESP_SSID, ESP_PASSWORD, WPA2);
+  WiFi.setCredentials(ESP_SSID, ESP_PASSWORD);
+  WiFi.connect();
 
   // wait for connection
   waitFor(WiFi.ready, 10000);
@@ -115,7 +115,8 @@ void loop() {
     // reconnect if disconnected
     if (!WiFi.ready()) {
       Serial.print("Reconnecting to ESP32 AP...");
-      WiFi.connect(ESP_SSID, ESP_PASSWORD, WPA2);
+      WiFi.setCredentials(ESP_SSID, ESP_PASSWORD);
+      WiFi.connect();
       waitFor(WiFi.ready, 5000);
 
       if (WiFi.ready()) {
