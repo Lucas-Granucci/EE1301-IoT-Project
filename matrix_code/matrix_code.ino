@@ -53,6 +53,8 @@ void drawMap(bool array[SIZE][SIZE][SIZE], int angRad) {
       // }
       if (val) {
         dma_display->drawPixel(i, z, myWHITE);
+      } else {
+        dma_display->drawPixelRGB888(i, z, 0, 0, 0);
       }
     }
   }
@@ -103,10 +105,13 @@ void setup() {
   dma_display->clearScreen();
 
   Serial.print(1);
+  
 
   // Declare some basic colors
-  myWHITE = dma_display->color565(255, 255, 255);
+  myWHITE = dma_display->color565(0, 0, 255);
+  dma_display->setBrightness8(150);
   Serial.print(2);
+  dma_display->fillScreen(myWHITE);
 
   // Make square
   // for (int i = 16; i < 48; i++) {
@@ -127,15 +132,13 @@ void setup() {
   
   // drawMap(array);
 
-  
-
-  WiFi.begin(ssid, password);
-  while(WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    Serial.print(".");
-  }
-  Serial.print("ESP32 IP Address: ");
-  Serial.println(WiFi.localIP());
+  // WiFi.begin(ssid, password);
+  // while(WiFi.status() != WL_CONNECTED) {
+  //   delay(500);
+  //   Serial.print(".");
+  // }
+  // Serial.print("ESP32 IP Address: ");
+  // Serial.println(WiFi.localIP());
 }
 
 double lastAngle = 0;
@@ -144,21 +147,22 @@ int lastTime = 0;
 
 void loop() {
   
-  JSONVar angleJSON = JSON.parse(getHTTP("https://api.particle.io/v1/devices/thinky/position?access_token=78a99eb4943d042f674bedd4ab8095af43702e39"));
-  double angle = angleJSON["result"];
-  Serial.println(angle);
+  // JSONVar angleJSON = JSON.parse(getHTTP("https://api.particle.io/v1/devices/thinky/position?access_token=78a99eb4943d042f674bedd4ab8095af43702e39"));
+  // double angle = angleJSON["result"];
+  // Serial.println(angle);
 
-  if (lastReadAngle != angle) { // like if we are rate limited
-    int time = micros();
-    JSONVar speedJSON = JSON.parse(getHTTP("https://api.particle.io/v1/devices/thinky/speed?access_token=78a99eb4943d042f674bedd4ab8095af43702e39"));
-    double speed = speedJSON["result"];
-    Serial.println(speed);
+  // if (lastReadAngle != angle) { // like if we are rate limited
+  //   int time = micros();
+  //   JSONVar speedJSON = JSON.parse(getHTTP("https://api.particle.io/v1/devices/thinky/speed?access_token=78a99eb4943d042f674bedd4ab8095af43702e39"));
+  //   double speed = speedJSON["result"];
+  //   Serial.println(speed);
 
-    angle = lastAngle + speed * (lastTime - time);
+  //   angle = lastAngle + speed * (lastTime - time);
 
-  }
-  lastAngle = angle;
+  // }
+  // lastAngle = angle;
 
-  drawMap(array, angle);
+  // drawMap(array, angle);
+  
   
 }
