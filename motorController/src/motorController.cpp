@@ -1,27 +1,12 @@
-/* 
- * Project myProject
- * Author: Your Name
- * Date: 
- * For comprehensive documentation and examples, please visit:
- * https://docs.particle.io/firmware/best-practices/firmware-template/
- */
-
 // Include Particle Device OS APIs
 #include "Particle.h"
 
-// Let Device OS manage the connection to the Particle Cloud
 SYSTEM_MODE(AUTOMATIC);
-
-// Run the application and system concurrently in separate threads
 SYSTEM_THREAD(ENABLED);
-
-// Show system, cloud connectivity, and application logs over USB
-// View logs with CLI using 'particle serial monitor --follow'
 SerialLogHandler logHandler(LOG_LEVEL_INFO);
 
 #define SIGNAL_A D2
 #define SIGNAL_B D3
-
 #define NUM_TIMESTAMPS 1000
 
 volatile int encoderPosition = 0;
@@ -33,6 +18,27 @@ int indexToReplace = 0;
 
 void readEncoder();
 
+
+/////////////////////////////////////////////////////////////////////////////
+const char* ESP_SSID = "ESP32_AP";
+const char* ESP_PASSWORD = "esp32password";
+
+// server details
+IPAdress serverIP(192, 168, 4, 1);  // check serials logs of esp32
+unsigned int serverPort = 4210;
+unsigned int localPort = 4210;
+
+UDP udp;
+
+// buffers for sending and recieving data
+char packetBuffer[255];
+char replyBuffer[255];
+
+// connection state
+bool connected = false;
+
+/////////////////////////////////////////////////////////////////////////////
+
 // setup() runs once, when the device is first turned on
 void setup() {
   pinMode(SIGNAL_A, INPUT);
@@ -41,8 +47,38 @@ void setup() {
   attachInterrupt(SIGNAL_A, readEncoder, CHANGE);
   attachInterrupt(SIGNAL_B, readEncoder, CHANGE);
 
-  Particle.variable("speed", speedRadiansPerSecond);
-  Particle.variable("position", cloudEncoderPositionRadians);
+  // Particle.variable("speed", speedRadiansPerSecond);
+  // Particle.variable("position", cloudEncoderPositionRadians);
+
+
+  /////////////////////////////////////////////////////////////////////////////
+
+  // setup particle to connect to esp32's AP and not cloud
+  Particle.disconnect();
+  WiFi.disconnect();
+  Particle.connect = MANUAL;
+
+  // connect to esp32 AP
+  Serial.printlnf("Connecting to %s...", ESP_SSID);
+  WiFi.connect(ESP_SSID, ESP_PASSWORD, WPA2);
+
+  // wait for connection
+  waitFor(WiFi.ready, 10000);
+
+  if (WiFi.ready()) {
+    Serial.println("Connected to ESP32 AP!");
+    Serial.printlnf("IP Address: %s", WiFi.localIP().toString().c_str());
+
+    connected = true;
+  
+    // start udp
+    udp.begin(localPort);
+    Serial.printlnf("UDP initialized on port %d", localPort);
+  } else {
+    Serial.println("Failed to connect to ESP32 AP");
+  }
+
+
   Serial.begin(9600);
 }
 
@@ -69,6 +105,44 @@ void loop() {
   }
 
   speedRadiansPerSecond = (pastPositions[mostRecentIndex] - pastPositions[indexToReplace]) / (pastTimestamps[mostRecentIndex] - pastTimestamps[indexToReplace]) * 1000000.0;
+
+
+
+
+
+  ///////////////////////////////////////////////////////////////////////
+  if (!connected) {
+    // reconnect if disconnected
+    if (!WiFi.ready()) {
+      Serial.print("Reconnecting to ESP32 AP...");
+      WiFi.connect(ESP_SSID, ESP_PASSWORD, WPA2);
+      waitFor(WiFi.ready, 5000);
+
+      if (WiFi.ready()) {
+        connected = true;
+      }
+
+    }
+    delay(1000);
+    return;
+  }
+
+
+  // send message every interval
+  static unsigned long int lastSendTime = 0;
+  if (millis() - lastSendTime > 2000) {
+    udp.beginPacket(serverIP, serverPort);
+    String message = "Good soup, it works";
+    message += millis();
+    udp.write(message);
+    udp.endPacket();
+
+    Serial.printlnf("Sent message to ESP32 at %s:%d", serverIP.toString().c_str(), serverPort);
+    lastSendTime = millis();
+  }
+
+  ///////////////////////////////////////////////////////////////////////
+
   
 
   // if(millis() % 500 == 9){
@@ -80,7 +154,7 @@ void loop() {
   // Serial.println(pastTimestamps[mostRecentIndex]);
   // Serial.print("new time ");
   // Serial.println(pastTimestamps[indexToReplace]);
-  Serial.println(speedRadiansPerSecond);
+  //Serial.println(speedRadiansPerSecond);
   // }
   
 }

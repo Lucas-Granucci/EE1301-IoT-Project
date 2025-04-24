@@ -1,9 +1,18 @@
 #include <ESP32-HUB75-MatrixPanel-I2S-DMA.h>
 #include <FastLED.h>
 #include <WiFi.h>
+#include <WiFIUdp.h>
 #include <HTTPClient.h>
 #include <Arduino_JSON.h>
 #include <cmath>
+
+const char* ssid = "ESP32_AP";
+const char* password = "esp32password";
+
+// UDP settings
+WiFiUDP udp;
+unsigned int localUdpPort = 4210;
+char packetBuffer = [255]; // Buffer for incoming packets
 
 // DO NOT CHANGE
 #define R1_PIN 25
@@ -21,8 +30,8 @@
 #define OE_PIN 15
 #define CLK_PIN 19
 
-const char* ssid = "iOT-LAB";
-const char* password = "photon999";
+// const char* ssid = "iOT-LAB";
+// const char* password = "photon999";
 
 // Initialize matrix
 MatrixPanel_I2S_DMA *dma_display = nullptr;
@@ -79,21 +88,21 @@ void drawMap(int array[SIZE][SIZE]) {
   }
 }
 
-String getHTTP(String url) {
-  HTTPClient http;
+// String getHTTP(String url) {
+//   HTTPClient http;
 
-  http.begin(url);
-  int httpResponseCode = http.GET();
-  String result = "{}"; 
-  if (httpResponseCode>0) {
-    Serial.print("HTTP Response code: ");
-    Serial.println(httpResponseCode);
-    result = http.getString();
-  }
-  http.end();
-  return result;
+//   http.begin(url);
+//   int httpResponseCode = http.GET();
+//   String result = "{}"; 
+//   if (httpResponseCode>0) {
+//     Serial.print("HTTP Response code: ");
+//     Serial.println(httpResponseCode);
+//     result = http.getString();
+//   }
+//   http.end();
+//   return result;
 
-}
+// }
 
 void setup() {
   Serial.begin(115200);
@@ -105,6 +114,21 @@ void setup() {
   dma_display->clearScreen();
 
   Serial.print(1);
+
+  ///////////////////////////////////////////////////////////////////////////////
+
+  // Configure ESP32 as access point
+  WiFi.softAP(ssid, password);
+
+  IPAddress myIP = WiFI.softAPIP();
+  Serial.print("AP IP address: ");
+  Serial.println(myIP);
+
+  // Start UDP
+  udp.begin(localUdpPort);
+  Serial.printf("UDP server listening on port %d\n", localUdpPort);
+
+  ///////////////////////////////////////////////////////////////////////////////
   
 
   // Declare some basic colors
@@ -128,7 +152,6 @@ void setup() {
       }
     }
   }
-  Serial.println(3);
   
   // drawMap(array);
 
@@ -146,6 +169,20 @@ double lastReadAngle = 0;
 int lastTime = 0;
 
 void loop() {
+
+  // Check for incoming UDP packets
+  int packetSize = udp.parsePacket();
+  if (packetSize) {
+    Serial.print("Recieved %d bytes from %s, port %d\n", packetSize, udp.remoteIP().toString().c_str(), udp.remotedPort());
+
+    // Read packet into buffer
+    int len = udp.read(packetBuffer, 255);
+    if (len > 0) {
+      packetBuffer[len] = 0; // null-terminate the string
+    }
+  }
+
+  Serial.printf("UDP packet contents: %s\n", packetBuffer);
   
   // JSONVar angleJSON = JSON.parse(getHTTP("https://api.particle.io/v1/devices/thinky/position?access_token=78a99eb4943d042f674bedd4ab8095af43702e39"));
   // double angle = angleJSON["result"];
