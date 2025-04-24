@@ -34,13 +34,13 @@ bool array[SIZE][SIZE][SIZE] = {0}; // x, y, z
 
 void drawMap(bool array[SIZE][SIZE][SIZE], int angRad) {
   
-  for (int i = 0; i < SIZE; i++) {
-    for (int z = 0; z < SIZE; z++) {
+  for (int i = -SIZE / 2; i < SIZE / 2; i++) {
+    for (int z = -SIZE/2; z < SIZE/2; z++) {
 
       int x = round(i * cos(angRad));
       int y = round(i * sin(angRad));
 
-      bool val = array[x][y][z];
+      bool val = array[x + SIZE/2][y + SIZE/2][z];
 
       // switch (val) {
       //   case 0:
@@ -111,7 +111,7 @@ void setup() {
   myWHITE = dma_display->color565(0, 0, 255);
   dma_display->setBrightness8(150);
   Serial.print(2);
-  dma_display->fillScreen(myWHITE);
+  // dma_display->fillScreen(myWHITE);
 
   // Make square
   // for (int i = 16; i < 48; i++) {
@@ -143,7 +143,7 @@ void setup() {
 
 double lastAngle = 0;
 double lastReadAngle = 0;
-int lastTime = 0;
+long int lastTime = 0;
 
 void loop() {
   
@@ -152,17 +152,24 @@ void loop() {
   // Serial.println(angle);
 
   // if (lastReadAngle != angle) { // like if we are rate limited
-  //   int time = micros();
+    long int time = millis();
+    if (lastTime == 0) {
+      lastTime = time;
+    }
   //   JSONVar speedJSON = JSON.parse(getHTTP("https://api.particle.io/v1/devices/thinky/speed?access_token=78a99eb4943d042f674bedd4ab8095af43702e39"));
-  //   double speed = speedJSON["result"];
+    double speed = 32.8;
   //   Serial.println(speed);
 
-  //   angle = lastAngle + speed * (lastTime - time);
+    double angle = lastAngle + speed * (time - lastTime) / 1000;
+    Serial.println(lastTime - time);
+    Serial.println(speed * (lastTime - time) / 1000);
+    Serial.println(angle);
 
   // }
-  // lastAngle = angle;
+  lastAngle = angle;
+  lastTime = time;
 
-  // drawMap(array, angle);
+  drawMap(array, angle);
   
   
 }
