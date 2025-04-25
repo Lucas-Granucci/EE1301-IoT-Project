@@ -41,6 +41,7 @@ bool connected = false;
 
 // setup() runs once, when the device is first turned on
 void setup() {
+  WiFi.clearCredentials();
   pinMode(SIGNAL_A, INPUT);
   pinMode(SIGNAL_B, INPUT);
 
@@ -127,16 +128,16 @@ void loop() {
       }
 
     }
-    delay(1000);
+    delay(100);
     return;
   }
 
 
   // send message every interval
   static unsigned long int lastSendTime = 0;
-  if (millis() - lastSendTime > 10) {
+  if (millis() - lastSendTime > 2000) {
     udp.beginPacket(serverIP, serverPort);
-    String message = "Good soup, it works";
+    String message = (String)random(256) + (String)random(256) + (String)random(256);
     message += millis();
     udp.write(message);
     udp.endPacket();
@@ -146,19 +147,5 @@ void loop() {
   }
 
   ///////////////////////////////////////////////////////////////////////
-
-  
-
-  // if(millis() % 500 == 9){
-  //   Serial.print("most recent: ");
-  // Serial.println(pastPositions[mostRecentIndex]);
-  // Serial.print("new recent ");
-  // Serial.println(pastPositions[indexToReplace]);
-  // Serial.print("most time ");
-  // Serial.println(pastTimestamps[mostRecentIndex]);
-  // Serial.print("new time ");
-  // Serial.println(pastTimestamps[indexToReplace]);
-  //Serial.println(speedRadiansPerSecond);
-  // }
   
 }
