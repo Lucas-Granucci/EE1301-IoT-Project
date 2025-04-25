@@ -56,10 +56,11 @@ void setup() {
   // setup particle to connect to esp32's AP and not cloud
   Particle.disconnect();
   WiFi.disconnect();
+  delay(1000);  // let WiFi chill a bit
 
   // connect to esp32 AP
   Serial.printlnf("Connecting to %s...", ESP_SSID);
-  WiFi.setCredentials(ESP_SSID, ESP_PASSWORD);
+  WiFi.setCredentials(ESP_SSID, ESP_PASSWORD, WPA2);
   WiFi.connect();
 
   // wait for connection
@@ -90,21 +91,21 @@ void readEncoder() {
 
 // loop() runs over and over again, as quickly as it can execute.
 void loop() {
-  cloudEncoderPositionRadians = (double)encoderPosition / 120.0 * 2 * 3.141592653589793;
-  pastPositions[indexToReplace] = ((double) cloudEncoderPositionRadians);
-  pastTimestamps[indexToReplace] = micros();
-  // Serial.println(millis());
-  indexToReplace++;
-  if (indexToReplace >= NUM_TIMESTAMPS) indexToReplace = 0; // go back to replacing the first element once it is the furthest one back
+  // cloudEncoderPositionRadians = (double)encoderPosition / 120.0 * 2 * 3.141592653589793;
+  // pastPositions[indexToReplace] = ((double) cloudEncoderPositionRadians);
+  // pastTimestamps[indexToReplace] = micros();
+  // // Serial.println(millis());
+  // indexToReplace++;
+  // if (indexToReplace >= NUM_TIMESTAMPS) indexToReplace = 0; // go back to replacing the first element once it is the furthest one back
 
-  int mostRecentIndex;
-  if (indexToReplace - 1 < 0) {
-    mostRecentIndex = NUM_TIMESTAMPS - 1;
-  } else {
-    mostRecentIndex = indexToReplace - 1;
-  }
+  // int mostRecentIndex;
+  // if (indexToReplace - 1 < 0) {
+  //   mostRecentIndex = NUM_TIMESTAMPS - 1;
+  // } else {
+  //   mostRecentIndex = indexToReplace - 1;
+  // }
 
-  speedRadiansPerSecond = (pastPositions[mostRecentIndex] - pastPositions[indexToReplace]) / (pastTimestamps[mostRecentIndex] - pastTimestamps[indexToReplace]) * 1000000.0;
+  // speedRadiansPerSecond = (pastPositions[mostRecentIndex] - pastPositions[indexToReplace]) / (pastTimestamps[mostRecentIndex] - pastTimestamps[indexToReplace]) * 1000000.0;
 
 
 
@@ -115,12 +116,14 @@ void loop() {
     // reconnect if disconnected
     if (!WiFi.ready()) {
       Serial.print("Reconnecting to ESP32 AP...");
-      WiFi.setCredentials(ESP_SSID, ESP_PASSWORD);
+      // WiFi.setCredentials(ESP_SSID, ESP_PASSWORD, WPA2);
       WiFi.connect();
       waitFor(WiFi.ready, 5000);
 
       if (WiFi.ready()) {
         connected = true;
+        udp.begin(localPort);
+        Serial.println("We have Reconnected");
       }
 
     }
@@ -131,7 +134,7 @@ void loop() {
 
   // send message every interval
   static unsigned long int lastSendTime = 0;
-  if (millis() - lastSendTime > 2000) {
+  if (millis() - lastSendTime > 10) {
     udp.beginPacket(serverIP, serverPort);
     String message = "Good soup, it works";
     message += millis();
