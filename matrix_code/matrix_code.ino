@@ -31,33 +31,52 @@ const size_t SIZE = 42;
 uint16_t myWHITE;
 
 bool array[SIZE][SIZE][SIZE] = {0}; // x, y, z
+int offset = 0;
 
-void drawMap(bool array[SIZE][SIZE][SIZE], int angRad) {
-  
-  for (int i = -SIZE / 2; i < SIZE / 2; i++) {
-    for (int z = -SIZE/2; z < SIZE/2; z++) {
+void drawMap(bool array[SIZE][SIZE][SIZE], double angRad) {
+  dma_display->clearScreen();
 
-      int x = round(i * cos(angRad));
-      int y = round(i * sin(angRad));
+  for (int i = 0; i < SIZE + 1; i++) {
+    for (int z = 0; z < SIZE + 1; z++) {
 
-      bool val = array[x + SIZE/2][y + SIZE/2][z];
-
-      // switch (val) {
-      //   case 0:
-      //     break;
-      //   case 1:
-      //     dma_display->drawPixel(i, z, myWHITE);
-      //     break;
-      //   default:
-      //     break;
+      // if (val) {
+        dma_display->drawPixel(offset + i, offset + z, myWHITE);
+      // } else {
+      //   dma_display->drawPixelRGB888(32 - SIZE/2 + i, 32 - SIZE/2 + z, 0, 0, 0);
       // }
-      if (val) {
-        dma_display->drawPixel(i, z, myWHITE);
-      } else {
-        dma_display->drawPixelRGB888(i, z, 0, 0, 0);
-      }
     }
   }
+  offset++;
+  if (offset > 64 - SIZE) {
+    offset = 0;
+  }
+  delay(10);
+  
+  // for (int i = 1; i < SIZE; i++) {
+  //   for (int z = 1; z < SIZE; z++) {
+
+  //     int x = round((i-SIZE/2) * cos(angRad));
+  //     int y = round((i-SIZE/2) * sin(angRad));
+
+  //     bool val = array[x + SIZE/2][y + SIZE/2][z];
+
+  //     // switch (val) {
+  //     //   case 0:
+  //     //     break;
+  //     //   case 1:
+  //     //     dma_display->drawPixel(i, z, myWHITE);
+  //     //     break;
+  //     //   default:
+  //     //     break;
+  //     // }
+  //     if (val) {
+  //       dma_display->drawPixel(32 - SIZE/2 + i, 32 - SIZE/2 + z, myWHITE);
+  //     } else {
+  //       dma_display->drawPixelRGB888(32 - SIZE/2 + i, 32 - SIZE/2 + z, 0, 0, 0);
+  //     }
+  //   }
+  // }
+
 }
 
 void drawMap(int array[SIZE][SIZE]) {
@@ -108,7 +127,7 @@ void setup() {
   
 
   // Declare some basic colors
-  myWHITE = dma_display->color565(0, 0, 255);
+  myWHITE = dma_display->color565(255, 0, 0);
   dma_display->setBrightness8(150);
   Serial.print(2);
   // dma_display->fillScreen(myWHITE);
@@ -121,9 +140,9 @@ void setup() {
   // }
 
   // make cube
-  for (int x = 10; x < 32; x++) {
-    for (int y = 10; y < 32; y++) {
-      for (int z = 10; z < 32; z++) {
+  for (int x = 0; x < SIZE; x++) {
+    for (int y = 0; y < SIZE; y++) {
+      for (int z = 0; z < SIZE; z++) {
         array[x][y][z] = true;
       }
     }
@@ -152,24 +171,40 @@ void loop() {
   // Serial.println(angle);
 
   // if (lastReadAngle != angle) { // like if we are rate limited
-    long int time = millis();
-    if (lastTime == 0) {
-      lastTime = time;
-    }
+  long int time = micros();
+  if (lastTime == 0) {
+    lastTime = time;
+  }
   //   JSONVar speedJSON = JSON.parse(getHTTP("https://api.particle.io/v1/devices/thinky/speed?access_token=78a99eb4943d042f674bedd4ab8095af43702e39"));
-    double speed = 32.8;
+  double speed = 32.8;
   //   Serial.println(speed);
 
-    double angle = lastAngle + speed * (time - lastTime) / 1000;
-    Serial.println(lastTime - time);
-    Serial.println(speed * (lastTime - time) / 1000);
-    Serial.println(angle);
+  double angle = lastAngle + speed * (double)(time - lastTime) / 1000000;
+  // Serial.println(lastTime - time);
+  // Serial.println(speed * (lastTime - time) / 1000000);
+  // Serial.println(angle);
+  if (angle >= 2 * PI) angle -= 2 * PI;
+  if (angle < 0) angle += 2 * PI;
 
   // }
   lastAngle = angle;
   lastTime = time;
 
+  // for (int x = 0; x < SIZE; x++) {
+  //   for (int y = 0; y < SIZE; y++) {
+  //     dma_display->drawPixel(32 - SIZE/2 + x, 32 - SIZE/2 + y, myWHITE);
+  //     delay(10);
+  //   }
+  // }
+  if (!dma_display) {
+  Serial.println("Display not initialized!");
+  return;
+  }
+
   drawMap(array, angle);
+  // delay(1000);
+  // Serial.printf("Free heap: %u bytes\n", ESP.getFreeHeap());
+
   
   
 }

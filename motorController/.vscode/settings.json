@@ -6,5 +6,6 @@
     },
     "particle.firmwareVersion": "5.8.0",
     "particle.targetPlatform": "p2",
-    "particle.targetDevice": "thinky"
+    "particle.targetDevice": "thinky",
+    "idf.pythonInstallPath": "/usr/local/bin/python3"
 }
