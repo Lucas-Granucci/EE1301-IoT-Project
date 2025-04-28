@@ -5,6 +5,14 @@
 #include <Arduino_JSON.h>
 #include <cmath>
 
+const char* ssid = "ESP32_AP";
+const char* password = "esp32password";
+
+// UDP settings
+WiFiUDP udp;
+unsigned int localUdpPort = 4210;
+char packetBuffer[255]; // Buffer for incoming packets
+
 // DO NOT CHANGE
 #define R1_PIN 13
 #define G1_PIN 12
@@ -21,12 +29,12 @@
 #define OE_PIN 41
 #define CLK_PIN 40
 
-const char* ssid = "iOT-LAB";
-const char* password = "photon999";
+// const char* ssid = "iOT-LAB";
+// const char* password = "photon999";
 
 // Initialize matrix
 MatrixPanel_I2S_DMA* dma_display = nullptr;
-const size_t SIZE = 52;
+const size_t SIZE = 56;
 
 uint16_t myWHITE;
 
@@ -34,23 +42,30 @@ bool array[SIZE][SIZE][SIZE] = { 0 };  // x, y, z
 int offset = 0;
 
 void drawMap(bool array[SIZE][SIZE][SIZE], double angRad) {
-  // dma_display->clearScreen();
+  Serial.println("starting draw");
 
   for (int i = 0; i < SIZE; i++) {
     for (int z = 0; z < SIZE; z++) {
+      int realI = i - SIZE/2;
+      int x = realI * cos(angRad) + SIZE/2;
+      int y = realI * sin(angRad) + SIZE/2;
 
-      // if (val) {
-      dma_display->drawPixel(offset + i, offset + z, myWHITE);
-      // } else {
-      //   dma_display->drawPixelRGB888(32 - SIZE/2 + i, 32 - SIZE/2 + z, 0, 0, 0);
-      // }
+      if (x >= SIZE) x = SIZE - 1;
+      if (y >= SIZE) y = SIZE - 1;
+
+      if (x < 0) x = 0;
+      if (y < 0) y = 0;
+
+      bool lightUp = array[x][y][z];
+
+      if (lightUp) {
+        dma_display->drawPixel((64 - SIZE)/2 + i, (64 - SIZE)/2 + z, myWHITE);
+      } else {
+        dma_display->drawPixelRGB888((64 - SIZE)/2 + i, (64 - SIZE)/2 + z, 0, 0, 0);
+      }
     }
   }
-  offset++;
-  if (offset > 64 - SIZE) {
-    offset = 0;
-  }
-  delay(10);
+  Serial.println("finished draw");
 
   // for (int i = 1; i < SIZE; i++) {
   //   for (int z = 1; z < SIZE; z++) {
@@ -131,17 +146,21 @@ void setup() {
   Serial.print(2);
   // dma_display->fillScreen(myWHITE);
 
-  // Make square
-  // for (int i = 16; i < 48; i++) {
-  //   for (int j = 16; j < 48; j++) {
-  //       array[i][j] = 1;
-  //   }
-  // }
+  // Configure ESP32 as access point
+  WiFi.softAP(ssid, password);
+
+  IPAddress myIP = WiFi.softAPIP();
+  Serial.print("AP IP address: ");
+  Serial.println(myIP);
+
+  // Start UDP
+  udp.begin(localUdpPort);
+  Serial.printf("UDP server listening on port %d\n", localUdpPort);
 
   // make cube
-  for (int x = 0; x < SIZE; x++) {
-    for (int y = 0; y < SIZE; y++) {
-      for (int z = 0; z < SIZE; z++) {
+  for (int x = 10; x < SIZE - 10; x++) {
+    for (int y = 10; y < SIZE-10; y++) {
+      for (int z = 10; z < SIZE-10; z++) {
         array[x][y][z] = true;
       }
     }
@@ -165,6 +184,35 @@ long int lastTime = 0;
 
 void loop() {
 
+  int packetSize = udp.parsePacket();
+  if (packetSize) {
+    // Serial.print("Recieved %d bytes from %s, port %d\n", packetSize, udp.remoteIP().toString().c_str(), udp.remotePort());
+
+    // Read packet into buffer
+    int len = udp.read(packetBuffer, 255);
+    if (len > 0) {
+      packetBuffer[len] = 0; // null-terminate the string
+    }
+    Serial.printf("UDP packet contents: %s\n", packetBuffer);
+    Serial.print((packetBuffer[0, 3]));
+
+    // gets rgb values from the received string
+    char rStr[4], gStr[4], bStr[4];
+    strncpy(rStr, packetBuffer, 3);
+    strncpy(gStr, packetBuffer + 3, 6);
+    strncpy(bStr, packetBuffer + 6, 9);
+
+    rStr[3] = '\0';
+    gStr[3] = '\0';
+    bStr[3] = '\0';
+
+    int r = atoi(rStr);
+    int g = atoi(gStr);
+    int b = atoi(bStr);
+
+    myWHITE = dma_display->color565(r, g, b);
+  }
+
   // JSONVar angleJSON = JSON.parse(getHTTP("https://api.particle.io/v1/devices/thinky/position?access_token=78a99eb4943d042f674bedd4ab8095af43702e39"));
   // double angle = angleJSON["result"];
   // Serial.println(angle);
@@ -175,7 +223,7 @@ void loop() {
     lastTime = time;
   }
   //   JSONVar speedJSON = JSON.parse(getHTTP("https://api.particle.io/v1/devices/thinky/speed?access_token=78a99eb4943d042f674bedd4ab8095af43702e39"));
-  double speed = 32.8;
+  double speed = 58.5;
   //   Serial.println(speed);
 
   double angle = lastAngle + speed * (double)(time - lastTime) / 1000000;
@@ -201,9 +249,21 @@ void loop() {
   }
   Serial.println("going");
 
-  dma_display->fillScreen(myWHITE);
+  // dma_display->fillScreen(myWHITE);
 
-  // drawMap(array, angle);
+  // for (int i = 10; i < 20; i++) {
+  //   for (int j = 0; j < SIZE; j++) {
+  //     dma_display->drawPixel(i, j, myWHITE);
+  //   }
+  // }
+
+  // for (int i = 44; i < 54; i++) {
+  //   for (int j = 0; j < SIZE; j++) {
+  //     dma_display->drawPixel(i, j, myWHITE);
+  //   }
+  // }
+
+  drawMap(array, angle); 
   // delay(1000);
   // Serial.printf("Free heap: %u bytes\n", ESP.getFreeHeap());
 }
