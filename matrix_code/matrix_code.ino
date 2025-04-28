@@ -6,41 +6,41 @@
 #include <cmath>
 
 // DO NOT CHANGE
-#define R1_PIN 25
-#define G1_PIN 26
-#define B1_PIN 27
-#define R2_PIN 14
-#define G2_PIN 12
-#define B2_PIN 13
-#define A_PIN 23
-#define B_PIN 22
+#define R1_PIN 13
+#define G1_PIN 12
+#define B1_PIN 11
+#define R2_PIN 10
+#define G2_PIN 9
+#define B2_PIN 8
+#define A_PIN 7
+#define B_PIN 6
 #define C_PIN 5
-#define D_PIN 18
-#define E_PIN 33 
-#define LAT_PIN 4
-#define OE_PIN 15
-#define CLK_PIN 19
+#define D_PIN 4
+#define E_PIN 3
+#define LAT_PIN 2
+#define OE_PIN 41
+#define CLK_PIN 40
 
 const char* ssid = "iOT-LAB";
 const char* password = "photon999";
 
 // Initialize matrix
-MatrixPanel_I2S_DMA *dma_display = nullptr;
-const size_t SIZE = 42;
+MatrixPanel_I2S_DMA* dma_display = nullptr;
+const size_t SIZE = 52;
 
 uint16_t myWHITE;
 
-bool array[SIZE][SIZE][SIZE] = {0}; // x, y, z
+bool array[SIZE][SIZE][SIZE] = { 0 };  // x, y, z
 int offset = 0;
 
 void drawMap(bool array[SIZE][SIZE][SIZE], double angRad) {
-  dma_display->clearScreen();
+  // dma_display->clearScreen();
 
-  for (int i = 0; i < SIZE + 1; i++) {
-    for (int z = 0; z < SIZE + 1; z++) {
+  for (int i = 0; i < SIZE; i++) {
+    for (int z = 0; z < SIZE; z++) {
 
       // if (val) {
-        dma_display->drawPixel(offset + i, offset + z, myWHITE);
+      dma_display->drawPixel(offset + i, offset + z, myWHITE);
       // } else {
       //   dma_display->drawPixelRGB888(32 - SIZE/2 + i, 32 - SIZE/2 + z, 0, 0, 0);
       // }
@@ -51,7 +51,7 @@ void drawMap(bool array[SIZE][SIZE][SIZE], double angRad) {
     offset = 0;
   }
   delay(10);
-  
+
   // for (int i = 1; i < SIZE; i++) {
   //   for (int z = 1; z < SIZE; z++) {
 
@@ -76,7 +76,6 @@ void drawMap(bool array[SIZE][SIZE][SIZE], double angRad) {
   //     }
   //   }
   // }
-
 }
 
 void drawMap(int array[SIZE][SIZE]) {
@@ -103,20 +102,20 @@ String getHTTP(String url) {
 
   http.begin(url);
   int httpResponseCode = http.GET();
-  String result = "{}"; 
-  if (httpResponseCode>0) {
+  String result = "{}";
+  if (httpResponseCode > 0) {
     Serial.print("HTTP Response code: ");
     Serial.println(httpResponseCode);
     result = http.getString();
   }
   http.end();
   return result;
-
 }
 
 void setup() {
   Serial.begin(115200);
-  HUB75_I2S_CFG::i2s_pins _pins={R1_PIN, G1_PIN, B1_PIN, R2_PIN, G2_PIN, B2_PIN, A_PIN, B_PIN, C_PIN, D_PIN, E_PIN, LAT_PIN, OE_PIN, CLK_PIN};
+  pinMode(LED_BUILTIN, OUTPUT);
+  HUB75_I2S_CFG::i2s_pins _pins = { R1_PIN, G1_PIN, B1_PIN, R2_PIN, G2_PIN, B2_PIN, A_PIN, B_PIN, C_PIN, D_PIN, E_PIN, LAT_PIN, OE_PIN, CLK_PIN };
   HUB75_I2S_CFG mxconfig(64, 64, 1, _pins);
 
   dma_display = new MatrixPanel_I2S_DMA(mxconfig);
@@ -124,10 +123,10 @@ void setup() {
   dma_display->clearScreen();
 
   Serial.print(1);
-  
+
 
   // Declare some basic colors
-  myWHITE = dma_display->color565(255, 0, 0);
+  myWHITE = dma_display->color565(0, 200, 0);
   dma_display->setBrightness8(150);
   Serial.print(2);
   // dma_display->fillScreen(myWHITE);
@@ -148,7 +147,7 @@ void setup() {
     }
   }
   Serial.println(3);
-  
+
   // drawMap(array);
 
   // WiFi.begin(ssid, password);
@@ -165,7 +164,7 @@ double lastReadAngle = 0;
 long int lastTime = 0;
 
 void loop() {
-  
+
   // JSONVar angleJSON = JSON.parse(getHTTP("https://api.particle.io/v1/devices/thinky/position?access_token=78a99eb4943d042f674bedd4ab8095af43702e39"));
   // double angle = angleJSON["result"];
   // Serial.println(angle);
@@ -197,14 +196,14 @@ void loop() {
   //   }
   // }
   if (!dma_display) {
-  Serial.println("Display not initialized!");
-  return;
+    Serial.println("Display not initialized!");
+    return;
   }
+  Serial.println("going");
 
-  drawMap(array, angle);
+  dma_display->fillScreen(myWHITE);
+
+  // drawMap(array, angle);
   // delay(1000);
   // Serial.printf("Free heap: %u bytes\n", ESP.getFreeHeap());
-
-  
-  
 }
