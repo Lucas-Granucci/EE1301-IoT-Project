@@ -42,7 +42,6 @@ bool array[SIZE][SIZE][SIZE] = { 0 };  // x, y, z
 int offset = 0;
 
 void drawMap(bool array[SIZE][SIZE][SIZE], double angRad) {
-  Serial.println("starting draw");
 
   for (int i = 0; i < SIZE; i++) {
     for (int z = 0; z < SIZE; z++) {
@@ -65,32 +64,6 @@ void drawMap(bool array[SIZE][SIZE][SIZE], double angRad) {
       }
     }
   }
-  Serial.println("finished draw");
-
-  // for (int i = 1; i < SIZE; i++) {
-  //   for (int z = 1; z < SIZE; z++) {
-
-  //     int x = round((i-SIZE/2) * cos(angRad));
-  //     int y = round((i-SIZE/2) * sin(angRad));
-
-  //     bool val = array[x + SIZE/2][y + SIZE/2][z];
-
-  //     // switch (val) {
-  //     //   case 0:
-  //     //     break;
-  //     //   case 1:
-  //     //     dma_display->drawPixel(i, z, myWHITE);
-  //     //     break;
-  //     //   default:
-  //     //     break;
-  //     // }
-  //     if (val) {
-  //       dma_display->drawPixel(32 - SIZE/2 + i, 32 - SIZE/2 + z, myWHITE);
-  //     } else {
-  //       dma_display->drawPixelRGB888(32 - SIZE/2 + i, 32 - SIZE/2 + z, 0, 0, 0);
-  //     }
-  //   }
-  // }
 }
 
 void drawMap(int array[SIZE][SIZE]) {
@@ -112,19 +85,38 @@ void drawMap(int array[SIZE][SIZE]) {
   }
 }
 
-String getHTTP(String url) {
-  HTTPClient http;
+void cubeOutline() {
+  for (int offset = 18; offset <= 25; offset++) {
+    for (int x = offset; x < SIZE - offset; x++) {
+        // X and Z plane intersections at the specific offsets
+        array[x][offset][offset] = true;
+        array[x][offset][SIZE-1-offset] = true;
+        array[x][SIZE-1-offset][offset] = true;
+        array[x][SIZE-1-offset][SIZE-1-offset] = true;
 
-  http.begin(url);
-  int httpResponseCode = http.GET();
-  String result = "{}";
-  if (httpResponseCode > 0) {
-    Serial.print("HTTP Response code: ");
-    Serial.println(httpResponseCode);
-    result = http.getString();
+        // Y and Z plane intersections at the specific offsets
+        array[offset][x][offset] = true;
+        array[SIZE-1-offset][x][offset] = true;
+        array[offset][x][SIZE-1-offset] = true;
+        array[SIZE-1-offset][x][SIZE-1-offset] = true;
+
+        // X and Y plane intersections at the specific offsets
+        array[offset][offset][x] = true;
+        array[SIZE-1-offset][offset][x] = true;
+        array[offset][SIZE-1-offset][x] = true;
+        array[SIZE-1-offset][SIZE-1-offset][x] = true;
+    }
   }
-  http.end();
-  return result;
+}
+
+void solidCube() {
+  for (int x = 10; x < SIZE - 10; x++) {
+    for (int y = 10; y < SIZE-10; y++) {
+      for (int z = 10; z < SIZE-10; z++) {
+        array[x][y][z] = true;
+      }
+    }
+  }
 }
 
 void setup() {
@@ -157,32 +149,20 @@ void setup() {
   udp.begin(localUdpPort);
   Serial.printf("UDP server listening on port %d\n", localUdpPort);
 
-  // make cube
-  for (int x = 10; x < SIZE - 10; x++) {
-    for (int y = 10; y < SIZE-10; y++) {
-      for (int z = 10; z < SIZE-10; z++) {
-        array[x][y][z] = true;
-      }
-    }
-  }
+  cubeOutline();
+  
   Serial.println(3);
 
-  // drawMap(array);
-
-  // WiFi.begin(ssid, password);
-  // while(WiFi.status() != WL_CONNECTED) {
-  //   delay(500);
-  //   Serial.print(".");
-  // }
-  // Serial.print("ESP32 IP Address: ");
-  // Serial.println(WiFi.localIP());
 }
 
 double lastAngle = 0;
 double lastReadAngle = 0;
 long int lastTime = 0;
+double speed = 58.5;
+double angle = 0.0;
 
 void loop() {
+  
 
   int packetSize = udp.parsePacket();
   if (packetSize) {
@@ -194,39 +174,35 @@ void loop() {
       packetBuffer[len] = 0; // null-terminate the string
     }
     Serial.printf("UDP packet contents: %s\n", packetBuffer);
-    Serial.print((packetBuffer[0, 3]));
 
     // gets rgb values from the received string
-    char rStr[4], gStr[4], bStr[4];
+    char rStr[4], gStr[4], bStr[4], speedStr[7];
     strncpy(rStr, packetBuffer, 3);
-    strncpy(gStr, packetBuffer + 3, 6);
-    strncpy(bStr, packetBuffer + 6, 9);
+    strncpy(gStr, packetBuffer + 3, 3);
+    strncpy(bStr, packetBuffer + 6, 3);
+    strncpy(speedStr, packetBuffer + 9, 6);
 
     rStr[3] = '\0';
     gStr[3] = '\0';
     bStr[3] = '\0';
+    speedStr[6] = '\0';
 
     int r = atoi(rStr);
     int g = atoi(gStr);
     int b = atoi(bStr);
+    Serial.println(speedStr);
+    angle = atof(speedStr);
 
     myWHITE = dma_display->color565(r, g, b);
   }
-
-  // JSONVar angleJSON = JSON.parse(getHTTP("https://api.particle.io/v1/devices/thinky/position?access_token=78a99eb4943d042f674bedd4ab8095af43702e39"));
-  // double angle = angleJSON["result"];
-  // Serial.println(angle);
 
   // if (lastReadAngle != angle) { // like if we are rate limited
   long int time = micros();
   if (lastTime == 0) {
     lastTime = time;
   }
-  //   JSONVar speedJSON = JSON.parse(getHTTP("https://api.particle.io/v1/devices/thinky/speed?access_token=78a99eb4943d042f674bedd4ab8095af43702e39"));
-  double speed = 58.5;
-  //   Serial.println(speed);
 
-  double angle = lastAngle + speed * (double)(time - lastTime) / 1000000;
+  // double angle = lastAngle + speed * (double)(time - lastTime) / 1000000;
   // Serial.println(lastTime - time);
   // Serial.println(speed * (lastTime - time) / 1000000);
   // Serial.println(angle);
@@ -237,33 +213,10 @@ void loop() {
   lastAngle = angle;
   lastTime = time;
 
-  // for (int x = 0; x < SIZE; x++) {
-  //   for (int y = 0; y < SIZE; y++) {
-  //     dma_display->drawPixel(32 - SIZE/2 + x, 32 - SIZE/2 + y, myWHITE);
-  //     delay(10);
-  //   }
-  // }
   if (!dma_display) {
     Serial.println("Display not initialized!");
     return;
   }
-  Serial.println("going");
-
-  // dma_display->fillScreen(myWHITE);
-
-  // for (int i = 10; i < 20; i++) {
-  //   for (int j = 0; j < SIZE; j++) {
-  //     dma_display->drawPixel(i, j, myWHITE);
-  //   }
-  // }
-
-  // for (int i = 44; i < 54; i++) {
-  //   for (int j = 0; j < SIZE; j++) {
-  //     dma_display->drawPixel(i, j, myWHITE);
-  //   }
-  // }
 
   drawMap(array, angle); 
-  // delay(1000);
-  // Serial.printf("Free heap: %u bytes\n", ESP.getFreeHeap());
 }

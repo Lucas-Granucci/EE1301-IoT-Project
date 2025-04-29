@@ -21,6 +21,7 @@ SerialLogHandler logHandler(LOG_LEVEL_INFO);
 
 #define SIGNAL_A D2
 #define SIGNAL_B D3
+#define BUTTON_PIN D5
 
 #define NUM_TIMESTAMPS 100
 
@@ -32,6 +33,8 @@ double pastTimestamps[NUM_TIMESTAMPS] = {0};
 int indexToReplace = 0;
 
 void readEncoder();
+
+String color;
 
 const char* ESP_SSID = "ESP32_AP";
 const char* ESP_PASSWORD = "esp32password";
@@ -50,6 +53,16 @@ char replyBuffer[255];
 // connection state
 bool connected = false;
 
+String getRandomRGBValue() {
+  int ret = random(256);
+  if (ret < 100 && ret > 9) {
+    return "0" + (String)ret;
+  } else if (ret < 10) {
+    return "00" + (String)ret;
+  }
+  return (String)ret;
+}
+
 // setup() runs once, when the device is first turned on
 void setup() {
   Serial.begin(9600);
@@ -58,6 +71,7 @@ void setup() {
 
   pinMode(SIGNAL_A, INPUT);
   pinMode(SIGNAL_B, INPUT);
+  pinMode(BUTTON_PIN, INPUT_PULLDOWN);
 
   attachInterrupt(SIGNAL_A, readEncoder, CHANGE);
   attachInterrupt(SIGNAL_B, readEncoder, CHANGE);
@@ -89,6 +103,7 @@ void setup() {
 
   // Particle.variable("speed", speedRadiansPerSecond);
   // Particle.variable("position", cloudEncoderPositionRadians);
+  color = getRandomRGBValue() + getRandomRGBValue() + getRandomRGBValue();
 }
 
 void readEncoder() {
@@ -97,8 +112,22 @@ void readEncoder() {
   }
 }
 
+String generateNewColor() {
+  return getRandomRGBValue() + getRandomRGBValue() + getRandomRGBValue();
+}
+
+int lastPressed = LOW;
+
 // loop() runs over and over again, as quickly as it can execute.
 void loop() {
+  if (digitalRead(BUTTON_PIN) == HIGH) {
+    if (lastPressed == LOW) {
+      color = generateNewColor();
+    }
+    lastPressed = HIGH;
+  } else {
+    lastPressed = LOW;
+  }
 
   if (!connected) {
     // reconnect if disconnected
@@ -108,7 +137,7 @@ void loop() {
       WiFi.connect();
       waitFor(WiFi.ready, 5000);
 
-      if (WiFi.ready()) {
+      if (WiFi.ready() && !connected) {
         connected = true;
         udp.begin(localPort);
         Serial.println("We have Reconnected");
@@ -136,17 +165,19 @@ void loop() {
   speedRadiansPerSecond = (pastPositions[mostRecentIndex] - pastPositions[indexToReplace]) / (pastTimestamps[mostRecentIndex] - pastTimestamps[indexToReplace]) * 1000000.0;
   
   static unsigned long int lastSendTime = 0;
-  if (millis() - lastSendTime > 2000) {
+  if (millis() - lastSendTime > 10) {
     udp.beginPacket(serverIP, serverPort);
-    String message = (String)random(256) + (String)random(256) + (String)random(256);
-    message += millis();
+    String message = color + (double)encoderPosition / 120.0 * 2 * 3.141592653589793;
     udp.write(message);
-    udp.endPacket();
+    if (!udp.endPacket()) {
+      Serial.println("UDP packet failed to send!");
+    }
 
-    Serial.printlnf("Sent message to ESP32 at %s:%d", serverIP.toString().c_str(), serverPort);
+    // Serial.printlnf("Sent message to ESP32 at %s:%d", serverIP.toString().c_str(), serverPort);
+    Serial.println(message);
     lastSendTime = millis();
   }
 
-  Serial.println(speedRadiansPerSecond);
+  // Serial.println(speedRadiansPerSecond);
 
 }
