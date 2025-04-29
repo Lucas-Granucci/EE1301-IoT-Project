@@ -86,25 +86,20 @@ void drawMap(int array[SIZE][SIZE]) {
 }
 
 void cubeOutline() {
-  for (int offset = 18; offset <= 25; offset++) {
-    for (int x = offset; x < SIZE - offset; x++) {
-        // X and Z plane intersections at the specific offsets
-        array[x][offset][offset] = true;
-        array[x][offset][SIZE-1-offset] = true;
-        array[x][SIZE-1-offset][offset] = true;
-        array[x][SIZE-1-offset][SIZE-1-offset] = true;
-
-        // Y and Z plane intersections at the specific offsets
-        array[offset][x][offset] = true;
-        array[SIZE-1-offset][x][offset] = true;
-        array[offset][x][SIZE-1-offset] = true;
-        array[SIZE-1-offset][x][SIZE-1-offset] = true;
-
-        // X and Y plane intersections at the specific offsets
-        array[offset][offset][x] = true;
-        array[SIZE-1-offset][offset][x] = true;
-        array[offset][SIZE-1-offset][x] = true;
-        array[SIZE-1-offset][SIZE-1-offset][x] = true;
+  int thickness = 2;
+  for (signed int offset = 16; offset <= 20; offset++) {
+    for (signed int x = offset; x < SIZE - offset; x++) {
+      for (signed int y = offset; y < SIZE - offset; y++) {
+        for (signed int z = offset; z < SIZE - offset; z++) {
+          int cnt = 0;
+          if (abs(x - offset) <= thickness || abs(x - ((int)SIZE-1-offset)) <= thickness) cnt++;
+          if (abs(y - offset) <= thickness || abs(y - ((int)SIZE-1-offset)) <= thickness) cnt++;
+          if (abs(z - offset) <= thickness || abs(z - ((int)SIZE-1-offset)) <= thickness) cnt++;
+          if (cnt >= 2) { // Only edges and corners (like a wireframe)
+            array[x][y][z] = true;
+          }
+        }
+      }
     }
   }
 }
@@ -191,10 +186,11 @@ void loop() {
     int g = atoi(gStr);
     int b = atoi(bStr);
     Serial.println(speedStr);
-    angle = atof(speedStr);
+    // speed = atof(speedStr);
 
     myWHITE = dma_display->color565(r, g, b);
   }
+  speed = 
 
   // if (lastReadAngle != angle) { // like if we are rate limited
   long int time = micros();
@@ -202,7 +198,7 @@ void loop() {
     lastTime = time;
   }
 
-  // double angle = lastAngle + speed * (double)(time - lastTime) / 1000000;
+  angle = lastAngle + speed * (double)(time - lastTime) / 1000000;
   // Serial.println(lastTime - time);
   // Serial.println(speed * (lastTime - time) / 1000000);
   // Serial.println(angle);
@@ -218,5 +214,5 @@ void loop() {
     return;
   }
 
-  drawMap(array, angle); 
+  drawMap(array, angle); )
 }

@@ -167,7 +167,7 @@ void loop() {
   static unsigned long int lastSendTime = 0;
   if (millis() - lastSendTime > 10) {
     udp.beginPacket(serverIP, serverPort);
-    String message = color + (double)encoderPosition / 120.0 * 2 * 3.141592653589793;
+    String message = color + speedRadiansPerSecond;
     udp.write(message);
     if (!udp.endPacket()) {
       Serial.println("UDP packet failed to send!");
