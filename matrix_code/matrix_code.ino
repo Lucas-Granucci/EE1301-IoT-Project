@@ -128,7 +128,7 @@ void setup() {
 
 
   // Declare some basic colors
-  myWHITE = dma_display->color565(0, 200, 0);
+  myWHITE = dma_display->color565(200, 200, 0);
   dma_display->setBrightness8(150);
   Serial.print(2);
   // dma_display->fillScreen(myWHITE);
@@ -158,7 +158,6 @@ double angle = 0.0;
 
 void loop() {
   
-
   int packetSize = udp.parsePacket();
   if (packetSize) {
     // Serial.print("Recieved %d bytes from %s, port %d\n", packetSize, udp.remoteIP().toString().c_str(), udp.remotePort());
@@ -190,7 +189,8 @@ void loop() {
 
     myWHITE = dma_display->color565(r, g, b);
   }
-  speed = 
+  
+  speed = 64.0;
 
   // if (lastReadAngle != angle) { // like if we are rate limited
   long int time = micros();
@@ -214,5 +214,6 @@ void loop() {
     return;
   }
 
-  drawMap(array, angle); )
+  drawMap(array, angle); 
+  // dma_display->drawCircle(32, 32, 10, myWHITE);
 }
