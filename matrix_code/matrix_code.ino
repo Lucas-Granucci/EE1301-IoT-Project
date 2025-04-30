@@ -41,6 +41,14 @@ uint16_t myWHITE;
 bool array[SIZE][SIZE][SIZE] = { 0 };  // x, y, z
 int offset = 0;
 
+enum Shape {
+  CUBE_OUTLINE,
+  SPHERE,
+  CYLINDER
+};
+
+Shape shape = CUBE_OUTLINE;
+
 void drawMap(bool array[SIZE][SIZE][SIZE], double angRad) {
 
   for (int i = 0; i < SIZE; i++) {
@@ -155,6 +163,7 @@ double lastReadAngle = 0;
 long int lastTime = 0;
 double speed = 58.5;
 double angle = 0.0;
+int oldR = 0;
 
 void loop() {
   
@@ -184,6 +193,21 @@ void loop() {
     int r = atoi(rStr);
     int g = atoi(gStr);
     int b = atoi(bStr);
+
+    if (r != oldR) {
+      switch (rand() % 3) {
+        case 1:
+          shape = CUBE_OUTLINE;
+          break;
+        case 2:
+          shape = SPHERE;
+          break;
+        case 0:
+          shape = CYLINDER;
+          break;
+      }
+    }
+    oldR = r;
     Serial.println(speedStr);
     // speed = atof(speedStr);
 
@@ -214,6 +238,19 @@ void loop() {
     return;
   }
 
-  drawMap(array, angle); 
-  // dma_display->drawCircle(32, 32, 10, myWHITE);
+  switch (shape) {
+    case CUBE_OUTLINE:
+      drawMap(array, angle); 
+      break;
+    case SPHERE:
+      dma_display->clearScreen();
+      dma_display->drawCircle(32, 32, 10, myWHITE);
+      break;
+    case CYLINDER:
+      dma_display->clearScreen();
+      dma_display->fillRect(22, 22, 20, 20, myWHITE);
+      break;
+  }
+  
+  // 
 }
